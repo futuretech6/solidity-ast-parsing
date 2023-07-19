@@ -15,6 +15,9 @@ def traverse_node(node, action: str = "print", semicolon: bool = True):
         elif node["nodeType"] == "PragmaDirective":
             print("pragma", *node["literals"], ";")
 
+        elif node["nodeType"] == "UsingForDirective":
+            print("using", node["libraryName"]["name"], "for", node["typeName"]["name"], ";")
+
         # Declaration
 
         elif node["nodeType"] == "VariableDeclaration":
@@ -28,7 +31,16 @@ def traverse_node(node, action: str = "print", semicolon: bool = True):
         # Definition
 
         elif node["nodeType"] == "ContractDefinition":
-            print("contract", node["name"], "{")
+            print(node["contractKind"], node["name"])
+            if len(node["baseContracts"]) > 0:
+                print("is")
+                isFirst = True
+                for baseContract in node["baseContracts"]:
+                    if not isFirst:
+                        print(",")
+                    isFirst = False
+                    traverse_node(baseContract, action)
+            print("{")
             for node in node["nodes"]:
                 traverse_node(node, action)
                 print()
@@ -45,15 +57,18 @@ def traverse_node(node, action: str = "print", semicolon: bool = True):
             print(
                 ")",
                 node["visibility"],
-                node["stateMutability"],
+                node["stateMutability"] if node["stateMutability"] != "nonpayable" else "",
             )
             if node["returnParameters"]["parameters"]:
                 print("returns", "(")
                 traverse_node(node["returnParameters"], action)
                 print(")")
-            print("{")
-            traverse_node(node["body"], action)
-            print("}")
+            if "body" in node:
+                print("{")
+                traverse_node(node["body"], action)
+                print("}")
+            else:
+                print(";")
 
         # Statement
 
@@ -72,9 +87,11 @@ def traverse_node(node, action: str = "print", semicolon: bool = True):
             traverse_node(node["condition"], action)
             print(")", "{")
             traverse_node(node["trueBody"], action)
-            print("}", "{")
-            traverse_node(node["falseBody"], action)
             print("}")
+            if "falseBody" in node:
+                print("else", "{")
+                traverse_node(node["falseBody"], action)
+                print("}")
 
         elif node["nodeType"] == "ForStatement":
             print("for", "(")
@@ -96,6 +113,11 @@ def traverse_node(node, action: str = "print", semicolon: bool = True):
                 traverse_node(declaration, action)
             print(")", "=")
             traverse_node(node["initialValue"], action)
+            print(";")
+
+        elif node["nodeType"] == "Return":
+            print("return")
+            traverse_node(node["expression"], action)
             print(";")
 
         # Expression
@@ -130,16 +152,16 @@ def traverse_node(node, action: str = "print", semicolon: bool = True):
         elif node["nodeType"] == "FunctionCall":
             traverse_node(node["expression"], action)
             print("(")
+            isFirst = True
             for argument in node["arguments"]:
+                if not isFirst:
+                    print(",")
+                isFirst = False
                 traverse_node(argument, action)
             print(")")
 
         elif node["nodeType"] == "FunctionCallOptions":
             traverse_node(node["expression"], action)
-            # print("(")
-            # for argument in node["arguments"]:
-            #     traverse_node(argument, action)
-            # print(")", "{")
             print("{")
             isFirst = True
             for i in range(len(node["options"])):
@@ -167,10 +189,6 @@ def traverse_node(node, action: str = "print", semicolon: bool = True):
             print(".")
             print(node["memberName"])
 
-        elif node["nodeType"] == "Return":
-            print("return")
-            traverse_node(node["expression"], action)
-
         elif node["nodeType"] == "IndexAccess":
             traverse_node(node["baseExpression"], action)
             print("[")
@@ -195,6 +213,10 @@ def traverse_node(node, action: str = "print", semicolon: bool = True):
                 print('"' + node["value"] + '"')
             else:
                 print(node["value"])
+
+        elif node["nodeType"] == "InheritanceSpecifier":
+            print(node["baseName"]["name"])
+
         else:
             print("[!] Unsupported nodeType {}".format(node["nodeType"]))
 
