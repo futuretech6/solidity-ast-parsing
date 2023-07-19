@@ -26,6 +26,7 @@ def traverse_node(node, action: str = "print"):
         elif node["nodeType"] == "VariableDeclaration":
             print(
                 node["typeDescriptions"]["typeString" if action == "print" else "typeIdentifier"],
+                node["storageLocation"] if node["storageLocation"] != "default" else "",
                 node["name"],
                 ";" if node["stateVariable"] else "",
             )
@@ -33,7 +34,7 @@ def traverse_node(node, action: str = "print"):
         elif node["nodeType"] == "FunctionDefinition":
             print("function", node["name"], "(")
             traverse_node(node["parameters"], action)
-            print(")", "returns", "(")
+            print(")", node["visibility"], "returns", "(")
             traverse_node(node["returnParameters"], action)
             print(")", "{")
             traverse_node(node["body"], action)
@@ -73,7 +74,8 @@ def traverse_node(node, action: str = "print"):
             print(")")
 
         elif node["nodeType"] == "ElementaryTypeNameExpression":
-            print(node["typeDescriptions"]["typeString" if action == "print" else "typeIdentifier"])
+            # print(node["typeDescriptions"]["typeString" if action == "print" else "typeIdentifier"])
+            print(node["typeName"]["name"])
             # print("(")
             # for argumentType in node["argumentTypes"]:
             #     print(argumentType["typeString" if action == "print" else "typeIdentifier"])
