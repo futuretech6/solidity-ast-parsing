@@ -8,19 +8,14 @@ def traverse_node(node, action: str = "print", semicolon: bool = True):
             for node in node["nodes"]:
                 traverse_node(node, action)
 
-        elif node["nodeType"] == "PragmaDirective":
-            print("pragma", *node["literals"], ";")
-
-        elif node["nodeType"] == "ContractDefinition":
-            print("contract", node["name"], "{")
-            for node in node["nodes"]:
-                traverse_node(node, action)
-                print()
-            print("}")
-
         elif node["nodeType"] == "Block":
             for statement in node["statements"]:
                 traverse_node(statement, action)
+
+        elif node["nodeType"] == "PragmaDirective":
+            print("pragma", *node["literals"], ";")
+
+        # Declaration
 
         elif node["nodeType"] == "VariableDeclaration":
             print(
@@ -29,6 +24,15 @@ def traverse_node(node, action: str = "print", semicolon: bool = True):
                 node["name"],
                 ";" if node["stateVariable"] else "",
             )
+
+        # Definition
+
+        elif node["nodeType"] == "ContractDefinition":
+            print("contract", node["name"], "{")
+            for node in node["nodes"]:
+                traverse_node(node, action)
+                print()
+            print("}")
 
         elif node["nodeType"] == "EventDefinition":
             print("event", node["name"], "(")
@@ -51,13 +55,7 @@ def traverse_node(node, action: str = "print", semicolon: bool = True):
             traverse_node(node["body"], action)
             print("}")
 
-        elif node["nodeType"] == "ParameterList":
-            isFirst = True
-            for parameter in node["parameters"]:
-                if not isFirst:
-                    print(",")
-                isFirst = False
-                traverse_node(parameter, action)
+        # Statement
 
         elif node["nodeType"] == "ExpressionStatement":
             traverse_node(node["expression"], action)
@@ -69,13 +67,65 @@ def traverse_node(node, action: str = "print", semicolon: bool = True):
             traverse_node(node["eventCall"])
             print(";")
 
-        elif node["nodeType"] == "Identifier":
-            print(node["name"])
+        elif node["nodeType"] == "IfStatement":
+            print("if", "(")
+            traverse_node(node["condition"], action)
+            print(")", "{")
+            traverse_node(node["trueBody"], action)
+            print("}", "{")
+            traverse_node(node["falseBody"], action)
+            print("}")
 
-        elif node["nodeType"] == "Assignment":
-            traverse_node(node["leftHandSide"], action)
-            print(node["operator"])
-            traverse_node(node["rightHandSide"], action)
+        elif node["nodeType"] == "ForStatement":
+            print("for", "(")
+            traverse_node(node["initializationExpression"], action=action)
+            traverse_node(node["condition"], action=action)
+            print(";")
+            traverse_node(node["loopExpression"], action=action, semicolon=False)
+            print(")", "{")
+            traverse_node(node["body"], action=action)
+            print("}")
+
+        elif node["nodeType"] == "VariableDeclarationStatement":
+            print("(")
+            isFirst = True
+            for declaration in node["declarations"]:
+                if not isFirst:
+                    print(",")
+                isFirst = False
+                traverse_node(declaration, action)
+            print(")", "=")
+            traverse_node(node["initialValue"], action)
+            print(";")
+
+        # Expression
+
+        elif node["nodeType"] == "NewExpression":
+            print("new")
+            print(node["typeDescriptions"]["typeString" if action == "print" else "typeIdentifier"], "(")
+            for argumentType in node["argumentTypes"]:
+                print(argumentType["typeString" if action == "print" else "typeIdentifier"])
+            print(")")
+
+        elif node["nodeType"] == "ElementaryTypeNameExpression":
+            # print(node["typeDescriptions"]["typeString" if action == "print" else "typeIdentifier"])
+            print(node["typeName"]["name"])
+            # print("(")
+            # for argumentType in node["argumentTypes"]:
+            #     print(argumentType["typeString" if action == "print" else "typeIdentifier"])
+            #     print(")")
+
+        elif node["nodeType"] == "TupleExpression":
+            print("(")
+            isFirst = True
+            for component in node["components"]:
+                if not isFirst:
+                    print(",")
+                isFirst = False
+                traverse_node(component, action)
+            print(")")
+
+        # FunctionCall
 
         elif node["nodeType"] == "FunctionCall":
             traverse_node(node["expression"], action)
@@ -100,39 +150,12 @@ def traverse_node(node, action: str = "print", semicolon: bool = True):
                 traverse_node(node["options"][i], action)
             print("}")
 
-        elif node["nodeType"] == "NewExpression":
-            print("new")
-            print(node["typeDescriptions"]["typeString" if action == "print" else "typeIdentifier"], "(")
-            for argumentType in node["argumentTypes"]:
-                print(argumentType["typeString" if action == "print" else "typeIdentifier"])
-            print(")")
+        # Operation
 
-        elif node["nodeType"] == "ElementaryTypeNameExpression":
-            # print(node["typeDescriptions"]["typeString" if action == "print" else "typeIdentifier"])
-            print(node["typeName"]["name"])
-            # print("(")
-            # for argumentType in node["argumentTypes"]:
-            #     print(argumentType["typeString" if action == "print" else "typeIdentifier"])
-            #     print(")")
-
-        elif node["nodeType"] == "IfStatement":
-            print("if", "(")
-            traverse_node(node["condition"], action)
-            print(")", "{")
-            traverse_node(node["trueBody"], action)
-            print("}", "{")
-            traverse_node(node["falseBody"], action)
-            print("}")
-
-        elif node["nodeType"] == "ForStatement":
-            print("for", "(")
-            traverse_node(node["initializationExpression"], action=action)
-            traverse_node(node["condition"], action=action)
-            print(";")
-            traverse_node(node["loopExpression"], action=action, semicolon=False)
-            print(")", "{")
-            traverse_node(node["body"], action=action)
-            print("}")
+        elif node["nodeType"] == "Assignment":
+            traverse_node(node["leftHandSide"], action)
+            print(node["operator"])
+            traverse_node(node["rightHandSide"], action)
 
         elif node["nodeType"] == "BinaryOperation":
             traverse_node(node["leftExpression"], action)
@@ -144,37 +167,9 @@ def traverse_node(node, action: str = "print", semicolon: bool = True):
             print(".")
             print(node["memberName"])
 
-        elif node["nodeType"] == "Literal":
-            if node["kind"] == "string":
-                print('"' + node["value"] + '"')
-            else:
-                print(node["value"])
-
-        elif node["nodeType"] == "VariableDeclarationStatement":
-            print("(")
-            isFirst = True
-            for declaration in node["declarations"]:
-                if not isFirst:
-                    print(",")
-                isFirst = False
-                traverse_node(declaration, action)
-            print(")", "=")
-            traverse_node(node["initialValue"], action)
-            print(";")
-
         elif node["nodeType"] == "Return":
             print("return")
             traverse_node(node["expression"], action)
-
-        elif node["nodeType"] == "TupleExpression":
-            print("(")
-            isFirst = True
-            for component in node["components"]:
-                if not isFirst:
-                    print(",")
-                isFirst = False
-                traverse_node(component, action)
-            print(")")
 
         elif node["nodeType"] == "IndexAccess":
             traverse_node(node["baseExpression"], action)
@@ -182,6 +177,24 @@ def traverse_node(node, action: str = "print", semicolon: bool = True):
             traverse_node(node["indexExpression"], action)
             print("]")
 
+        # BasicElement
+
+        elif node["nodeType"] == "ParameterList":
+            isFirst = True
+            for parameter in node["parameters"]:
+                if not isFirst:
+                    print(",")
+                isFirst = False
+                traverse_node(parameter, action)
+
+        elif node["nodeType"] == "Identifier":
+            print(node["name"])
+
+        elif node["nodeType"] == "Literal":
+            if node["kind"] == "string":
+                print('"' + node["value"] + '"')
+            else:
+                print(node["value"])
         else:
             print("[!] Unsupported nodeType {}".format(node["nodeType"]))
 
