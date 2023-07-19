@@ -1,0 +1,9 @@
+# vscode config
+.vscode
+
+# project output/cache
+__pycache__
+*.json
+
+# chore
+.DS_Store
